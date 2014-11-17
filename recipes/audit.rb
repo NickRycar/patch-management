@@ -24,8 +24,8 @@ node.default['patch-management']['audit-status'] = "started"
 if node['patch-management']['packages'].is_a?(Hash)
 	node['patch-management']['packages'].each do |pkg,vrs|
 		if node['software'][pkg]
-			if node['software'][pkg]['version'] == "#{vrs}"
-				log "Package '#{pkg}' is installed and at version #{vrs}."
+			if node['software'][pkg]['version'] >= "#{vrs}"
+				log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})."
 			else
 				log "Package '#{pkg}' is installed, but needs to be patched!"
 				node.override['patch-management']['audit-status'] = "failed"

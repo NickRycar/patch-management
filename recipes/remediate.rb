@@ -19,10 +19,10 @@
 
 if node['patch-management']['packages'].is_a?(Hash)
 	node['patch-management']['packages'].each do |pkg, vrs|
-		package "#{pkg}" do
-			version "#{vrs}"
-			action :install
-		end
+			package "#{pkg}" do
+				action :upgrade
+				only_if { vrs < node['software'][pkg]['version'] }
+			end
 	end
 else
 	Chef::Log.warn('`node["patch-management"]["packages"]` must be a Hash.')
