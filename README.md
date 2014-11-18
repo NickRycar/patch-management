@@ -1,12 +1,13 @@
 patch-management Cookbook
 =========================
-Ensures specified versions of packages are installed on the system.
+Ensures specified packages are installed and patched.
 
 Requirements
 ------------
 ### Platform:
 
 * Tested on CentOS 6.5
+* Tested on Ubuntu 12.04 LTS
 * Should work on a wide variety of other *nix systems
 
 ### Cookbook Dependencies:
@@ -19,7 +20,7 @@ Attributes
 packages
 --------
 
-Hash of packages and the associated version to install.
+Hash of packages and their associated minimum version.
 
 Example:
 
@@ -38,12 +39,12 @@ Recipes
 
 * Installs an OHAI plugin (based on the rackerlabs 'packages' plugin: https://github.com/rackerlabs/ohai-plugins/tree/master/plugins) that will catalog installed packages for evaluation. Provides a node['software'] automatic attribute that lists installed packages and their versions.
 
-* Iterates through the hash specified in node['patch-management']['packages'] and sets a node['patch-management']['patched'] boolean to true if all packages are installed and of the correct version, or false if any are not present, or of a version different than the one specified in the attribute hash.
+* Iterates through the hash specified in node['patch-management']['packages'] and sets a node['patch-management']['patched'] boolean to true if all packages are installed and of the correct version or later, or false if any are not present, or of a version different than the one specified in the attribute hash.
 
 
 ### patch-management::remediate
 
-* Iterates through the hash specified in node['patch-management']['packages'] and ensures that the packages contained theirein are installed and match the version specified in the hash. Will set node['patch-management']['patched'] to true if it completes without issue.
+* Iterates through the hash specified in node['patch-management']['packages'] and ensures that the packages contained theirein are installed and at least the version specified in the hash. Installs packages that aren't present, upgrades those that are below the specified version. Will set node['patch-management']['patched'] to true if it completes without issue.
 
 Usage
 -----
@@ -68,7 +69,7 @@ License and Author
 ------------------
 
 Author:: Chef Software, Inc (support@getchef.com)  
-Author:: Nicolas Rycar (nrycar@getchef.com) 
+Author:: Nicolas Rycar (nrycar@getchef.com)  
 Author:: Andre Elizondo (andre@getchef.com) 
 
 Copyright:: 2014, Chef Software, Inc.
