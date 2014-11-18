@@ -68,7 +68,8 @@ License and Author
 ------------------
 
 Author:: Chef Software, Inc (support@getchef.com)  
-Author:: Nicolas Rycar (nrycar@getchef.com)  
+Author:: Nicolas Rycar (nrycar@getchef.com) 
+Author:: Andre Elizondo (andre@getchef.com) 
 
 Copyright:: 2014, Chef Software, Inc.
 

@@ -17,13 +17,36 @@
 # limitations under the License.
 #
 
+# Load our package comparison helper
+::Chef::Resource::Package.send(:include, PatchManagement::Helper)
+
 if node['patch-management']['packages'].is_a?(Hash)
 	node['patch-management']['packages'].each do |pkg, vrs|
-			package "#{pkg}" do
-				action :upgrade
-				only_if { vrs < node['software'][pkg]['version'] }
+		if node['software'][pkg]
+
+			case node['platform_family']
+			when "debian"
+				package "#{pkg}" do
+					action :upgrade
+					not_if { dpkg_newer?( node['software'][pkg]['version'], "#{vrs}" ) }
+				end
+			when "rhel"
+				package "#{pkg}" do
+					action :upgrade
+					not_if { rpm_newer?( node['software'][pkg]['version'], "#{vrs}" ) }
+				end
 			end
+
+		else
+			
+			package "#{pkg}" do
+				action :install
+			end
+
+		end
+
 	end
+
 else
 	Chef::Log.warn('`node["patch-management"]["packages"]` must be a Hash.')
 end
