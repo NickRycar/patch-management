@@ -18,4 +18,4 @@
 #
 
 include_recipe 'patch-management::audit'
-include_recipe 'patch-management::remediate'	
+include_recipe 'patch-management::remediate'
