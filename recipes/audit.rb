@@ -26,38 +26,33 @@ include_recipe "ohai::default"
 node.default['patch-management']['audit-status'] = "started"
 
 if node['patch-management']['packages'].is_a?(Hash)
-	
-	node['patch-management']['packages'].each do |pkg,vrs|
-		
-		if node['software'][pkg]
-			
-			case node['platform_family']
-			
-			when "debian"
-				if dpkg_newer?(node['software'][pkg]['version'], "#{vrs}")
-					log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})."
-				else
-					log "Package '#{pkg}' is installed, but needs to be patched!"
-					node.override['patch-management']['audit-status'] = "failed"
-				end
-			
-			when "rhel"
-				if rpm_newer?(node['software'][pkg]['version'], "#{vrs}")
-					log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})."
-				else
-					log "Package '#{pkg}' is installed, but needs to be patched!"
-					node.override['patch-management']['audit-status'] = "failed"
-				end
-			end
-		
-		else
-			log "Package '#{pkg}' is not installed!"
-			node.override['patch-management']['audit-status'] = "failed"
-		end
-	end
 
+  node['patch-management']['packages'].each do |pkg,vrs|
+    
+    if node['software'][pkg]
+
+        if pkg_newer?(node['software'][pkg]['version'], "#{vrs}")
+          log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})."
+        else
+          log "Package '#{pkg}' is installed, but needs to be patched!" do
+            level :warn
+          end
+          audit = 'failed'
+        end 
+
+    else
+      log "Package '#{pkg}' is not installed!"
+        level :fatal
+      end
+      audit = 'failed'
+    end
+  end
 else
-	Chef::Log.warn('`node["patch-management"]["packages"]` must be a Hash.')
+  Chef::Log.fatal('`node["patch-management"]["packages"]` must be a Hash.')
 end
 
-node.override['patch-management']['patched'] = true unless node['patch-management']['audit-status'] == "failed"
+if audit = 'failed'
+  tag_me!('audit-failed')
+else
+  tag_me('audit-passed')
+end
