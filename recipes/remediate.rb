@@ -20,18 +20,19 @@
 # Load our package comparison helper
 ::Chef::Resource::Package.send(:include, PatchManagement::Helper)
 
+node.run_state['patch_status'] = 'patch_failed'
+
 if node['patch-management']['packages'].is_a?(Hash)
   node['patch-management']['packages'].each do |pkg, vrs|
     if node['software'][pkg]
         package "#{pkg}" do
           action :upgrade
           not_if { pkg_newer?( node['software'][pkg]['version'], "#{vrs}" ) }
-          notifies :run, "ruby_block[patched_successfully]"
         end
+        node.run_state['patch_status'] = 'patch_success'
     else
       package "#{pkg}" do
         action :install
-        notifies :run, "ruby_block[patched_successfully]"
       end
     end
   end
@@ -43,9 +44,13 @@ end
 #tag_me!('patched-successfully')
 
 #tag during execution instead of compile time
-ruby_block "patched_successfully" do
+ruby_block "patched_status" do
   block do
-    node.normal[:tags].push('patched-successfully') unless node.normal[:tags].include?('patched-successfully')
+    if node.run_state['patch_status'] = 'patch_success'
+      node.normal[:tags].push('patched-successfully') unless node.normal[:tags].include?('patched-successfully')
+    else
+      node.normal[:tags].delete('patched-successfully') if node.normal[:tags].include?('patched-successfully')
+    end
   end
-  action :nothing
+  action :run
 end
