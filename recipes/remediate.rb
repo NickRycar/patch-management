@@ -26,19 +26,26 @@ if node['patch-management']['packages'].is_a?(Hash)
         package "#{pkg}" do
           action :upgrade
           not_if { pkg_newer?( node['software'][pkg]['version'], "#{vrs}" ) }
+          notifies :run, "ruby_block[patched_successfully]"
         end
     else
       package "#{pkg}" do
         action :install
+        notifies :run, "ruby_block[patched_successfully]"
       end
-
     end
-
   end
-
 else
   Chef::Log.fatal('`node["patch-management"]["packages"]` must be a Hash.')
 end
 
 #node.override['patch-management']['patched'] = true
-tag_me!('patched-successfully')
+#tag_me!('patched-successfully')
+
+#tag during execution instead of compile time
+ruby_block "patched_successfully" do
+  block do
+    node.normal[:tags].push('patched-successfully') unless node.normal[:tags].include?('patched-successfully')
+  end
+  action :nothing
+end
