@@ -23,41 +23,44 @@ include_recipe "ohai::default"
 # Load our package comparison helper
 ::Chef::Recipe.send(:include, PatchManagement::Helper)
 
-node.default['patch-management']['audit-status'] = "started"
+node.run_state['audit'] = 'patch-audit-passed'
 
 if node['patch-management']['packages'].is_a?(Hash)
-	
-	node['patch-management']['packages'].each do |pkg,vrs|
-		
-		if node['software'][pkg]
-			
-			case node['platform_family']
-			
-			when "debian"
-				if dpkg_newer?(node['software'][pkg]['version'], "#{vrs}")
-					log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})."
-				else
-					log "Package '#{pkg}' is installed, but needs to be patched!"
-					node.override['patch-management']['audit-status'] = "failed"
-				end
-			
-			when "rhel"
-				if rpm_newer?(node['software'][pkg]['version'], "#{vrs}")
-					log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})."
-				else
-					log "Package '#{pkg}' is installed, but needs to be patched!"
-					node.override['patch-management']['audit-status'] = "failed"
-				end
-			end
-		
-		else
-			log "Package '#{pkg}' is not installed!"
-			node.override['patch-management']['audit-status'] = "failed"
-		end
-	end
-
+  node['patch-management']['packages'].each do |pkg,vrs|
+    if node['software'][pkg]
+        if pkg_newer?(node['software'][pkg]['version'], "#{vrs}")
+          log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})." do
+            level :info
+          end
+        else
+          log "Package '#{pkg}' is installed, but needs to be patched!" do
+            level :warn
+          end
+          node.run_state['audit'] = 'patch-audit-failed'
+        end
+    else
+      log "Package '#{pkg}' is not installed!" do
+        level :warn
+      end
+      node.run_state['audit'] = 'patch-audit-failed'
+    end
+  end
 else
-	Chef::Log.warn('`node["patch-management"]["packages"]` must be a Hash.')
+  Chef::Log.fatal('`node["patch-management"]["packages"]` must be a Hash.')
 end
 
-node.override['patch-management']['patched'] = true unless node['patch-management']['audit-status'] == "failed"
+
+ruby_block "audit_status" do
+  block do
+    status = node.run_state['audit']
+    case status
+    when 'patch-audit-failed'
+      node.normal[:tags].push(status) unless node.normal[:tags].include?(status)
+      node.normal[:tags].delete('patch-audit-passed') if node.normal[:tags].include?('patch-audit-passed')
+    when 'patch-audit-passed'
+      node.normal[:tags].push(status) unless node.normal[:tags].include?(status)
+      node.normal[:tags].delete('patch-audit-failed') if node.normal[:tags].include?('patch-audit-failed')
+    end
+  end
+  action :run
+end

@@ -20,35 +20,37 @@
 # Load our package comparison helper
 ::Chef::Resource::Package.send(:include, PatchManagement::Helper)
 
+node.run_state['patch_status'] = 'patch_failed'
+
 if node['patch-management']['packages'].is_a?(Hash)
-	node['patch-management']['packages'].each do |pkg, vrs|
-		if node['software'][pkg]
-
-			case node['platform_family']
-			when "debian"
-				package "#{pkg}" do
-					action :upgrade
-					not_if { dpkg_newer?( node['software'][pkg]['version'], "#{vrs}" ) }
-				end
-			when "rhel"
-				package "#{pkg}" do
-					action :upgrade
-					not_if { rpm_newer?( node['software'][pkg]['version'], "#{vrs}" ) }
-				end
-			end
-
-		else
-			
-			package "#{pkg}" do
-				action :install
-			end
-
-		end
-
-	end
-
+  node['patch-management']['packages'].each do |pkg, vrs|
+    if node['software'][pkg]
+        package "#{pkg}" do
+          action :upgrade
+          not_if { pkg_newer?( node['software'][pkg]['version'], "#{vrs}" ) }
+        end
+        node.run_state['patch_status'] = 'patch_success'
+    else
+      package "#{pkg}" do
+        action :install
+      end
+    end
+  end
 else
-	Chef::Log.warn('`node["patch-management"]["packages"]` must be a Hash.')
+  Chef::Log.fatal('`node["patch-management"]["packages"]` must be a Hash.')
 end
 
-node.override['patch-management']['patched'] = true
+#node.override['patch-management']['patched'] = true
+#tag_me!('patched-successfully')
+
+#tag during execution instead of compile time
+ruby_block "patched_status" do
+  block do
+    if node.run_state['patch_status'] = 'patch_success'
+      node.normal[:tags].push('patched-successfully') unless node.normal[:tags].include?('patched-successfully')
+    else
+      node.normal[:tags].delete('patched-successfully') if node.normal[:tags].include?('patched-successfully')
+    end
+  end
+  action :run
+end
