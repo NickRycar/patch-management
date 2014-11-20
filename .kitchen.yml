@@ -1,0 +1,46 @@
+---
+driver_plugin: vagrant
+driver_config:
+  require_chef_omnibus: true
+
+provisioner:
+  name: chef_zero
+
+platforms:
+  - name: ubuntu-12.04
+    driver:
+      box: chef/ubuntu-12.04
+    run_list:
+      - recipe[apt::default]
+
+  - name: centos-6.5
+    driver:
+      box: chef/centos-6.5
+    run_list:
+      - recipe[yum::default]
+
+suites:
+  - name: centos
+    run_list:
+      - recipe[patch-management::default]
+    attributes:
+      patch-management:
+        packages: 
+          httpd: '2.2.15-39.el6'
+          bash: '4.1.2-29.el6'
+          openssl: '1.0.1e-16.el6_5.7'
+          rpmdevtools: '7.5-2.el6'
+    excludes:
+      - ubuntu-12.04
+
+  - name: ubuntu
+    run_list:
+      - recipe[patch-management::default]
+    attributes:
+      patch-management:
+        packages: 
+          apache2: '2.2.22-1ubuntu1.7'
+          bash: '4.2-2ubuntu2.6'
+          openssl: '1.0.1-4ubuntu5.12'
+    excludes:
+      - centos-6.5
