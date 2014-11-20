@@ -10,9 +10,6 @@ Requirements
 * Tested on Ubuntu 12.04 LTS
 * Should work on a wide variety of other *nix systems
 
-### Cookbook Dependencies:
-
-* ohai (https://supermarket.getchef.com/cookbooks/ohai)
 
 Attributes
 ==========
@@ -28,8 +25,21 @@ Example:
 node.default['patch-management']['packages'] = {'httpd' => '2.2.15-39.el6', 'bash' => '4.1.2-29.el6'}
 ```
 
+Modules
+=======
+
+### PatchManagement::Helper
+
+Provides a handful of abstracted helper functions for evaluating installed packages.
+
+* pkg_installed?(pkg) -- returns true if specified package is installed
+
+* pkg_version(pkg) -- returns the currently installed version of specified package
+
+* pkg_newer?(ver1,ver2) -- returns true if "ver1" is greater than or equal to "ver2"
+
 Recipes
--------
+=======
 
 ### patch-management::default
 
@@ -37,14 +47,14 @@ Recipes
 
 ### patch-management::audit
 
-* Installs an OHAI plugin (based on the rackerlabs 'packages' plugin: https://github.com/rackerlabs/ohai-plugins/tree/master/plugins) that will catalog installed packages for evaluation. Provides a node['software'] automatic attribute that lists installed packages and their versions.
-
 * Iterates through the hash specified in node['patch-management']['packages'] and sets a node['patch-management']['patched'] boolean to true if all packages are installed and of the correct version or later, or false if any are not present, or of a version different than the one specified in the attribute hash.
 
 
 ### patch-management::remediate
 
-* Iterates through the hash specified in node['patch-management']['packages'] and ensures that the packages contained theirein are installed and at least the version specified in the hash. Installs packages that aren't present, upgrades those that are below the specified version. Will set node['patch-management']['patched'] to true if it completes without issue.
+* Iterates through the hash specified in node['patch-management']['packages'] and ensures that the packages contained theirein are installed and at least the version specified in the hash. Installs packages that aren't present, upgrades those that are below the specified version. 
+
+* Will re-run patch-managment::audit to ensure that node['patch-management']['patched'] is properly set.
 
 Usage
 -----
@@ -63,6 +73,14 @@ Example:
     }
   }
 }
+```
+
+Once the cookbook is in all appropriate servers' run-lists, you can use the node['patch-management']['patched'] attribute to determine which machines have passed/failed their audits.
+
+Example:
+
+```bash
+$ knife search node "patched:false"
 ```
 
 License and Author

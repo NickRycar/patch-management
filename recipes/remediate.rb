@@ -21,34 +21,29 @@
 ::Chef::Resource::Package.send(:include, PatchManagement::Helper)
 
 if node['patch-management']['packages'].is_a?(Hash)
+
 	node['patch-management']['packages'].each do |pkg, vrs|
-		if node['software'][pkg]
 
-			case node['platform_family']
-			when "debian"
-				package "#{pkg}" do
-					action :upgrade
-					not_if { dpkg_newer?( node['software'][pkg]['version'], "#{vrs}" ) }
-				end
-			when "rhel"
-				package "#{pkg}" do
-					action :upgrade
-					not_if { rpm_newer?( node['software'][pkg]['version'], "#{vrs}" ) }
-				end
-			end
+    # If the package is already installed, upgrade it if it isn't 
+    # already >= the specified version
+    if pkg_installed?(pkg)
+      package "#{pkg}" do
+        action :upgrade
+        not_if { pkg_newer?( pkg_version(pkg), "#{vrs}" ) }
+      end
 
-		else
-			
-			package "#{pkg}" do
-				action :install
-			end
+    # Otherwise, install it.
+    else
+      package "#{pkg}" do
+        action :install
+      end
 
-		end
-
-	end
+    end
+  end
 
 else
-	Chef::Log.warn('`node["patch-management"]["packages"]` must be a Hash.')
+  Chef::Log.warn('`node["patch-management"]["packages"]` must be a Hash.')
 end
 
-node.override['patch-management']['patched'] = true
+# Re-run the audit to confirm our "patched" attribute
+include_recipe 'patch-management::audit'

@@ -17,9 +17,6 @@
 # limitations under the License.
 #
 
-# Load ohai custom plugins
-include_recipe "ohai::default"
-
 # Load our package comparison helper
 ::Chef::Recipe.send(:include, PatchManagement::Helper)
 
@@ -29,35 +26,32 @@ if node['patch-management']['packages'].is_a?(Hash)
 	
 	node['patch-management']['packages'].each do |pkg,vrs|
 		
-		if node['software'][pkg]
+		if pkg_installed?(pkg)
 			
-			case node['platform_family']
-			
-			when "debian"
-				if dpkg_newer?(node['software'][pkg]['version'], "#{vrs}")
-					log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})."
+				if pkg_newer?(pkg_version(pkg), "#{vrs}")
+					log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{pkg_version(pkg)})."
 				else
 					log "Package '#{pkg}' is installed, but needs to be patched!"
-					node.override['patch-management']['audit-status'] = "failed"
+					node.default['patch-management']['audit-status'] = "failed"
 				end
-			
-			when "rhel"
-				if rpm_newer?(node['software'][pkg]['version'], "#{vrs}")
-					log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})."
-				else
-					log "Package '#{pkg}' is installed, but needs to be patched!"
-					node.override['patch-management']['audit-status'] = "failed"
-				end
-			end
-		
+
 		else
 			log "Package '#{pkg}' is not installed!"
-			node.override['patch-management']['audit-status'] = "failed"
+			node.default['patch-management']['audit-status'] = "failed"
 		end
-	end
+	
+  end
 
 else
 	Chef::Log.warn('`node["patch-management"]["packages"]` must be a Hash.')
 end
 
-node.override['patch-management']['patched'] = true unless node['patch-management']['audit-status'] == "failed"
+
+# If anything failed the audit, set "patched" to false. Otherwise set to true.
+if node['patch-management']['audit_status'] == "failed"
+  node.override['patch-management']['patched'] = false
+else
+  node.override['patch-management']['patched'] = true
+end
+
+node.default['patch-management']['audit-status'] = "complete"
