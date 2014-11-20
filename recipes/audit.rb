@@ -31,19 +31,16 @@ if node['patch-management']['packages'].is_a?(Hash)
         if pkg_newer?(node['software'][pkg]['version'], "#{vrs}")
           log "Package '#{pkg}' is installed and at version #{vrs} or later (Installed: #{node['software'][pkg]['version']})." do
             level :info
-            notifies :run, "ruby_block[audit_status]", :immediately
           end
         else
           log "Package '#{pkg}' is installed, but needs to be patched!" do
             level :warn
-            notifies :run, "ruby_block[audit_status]"
           end
           node.run_state['audit'] = 'patch-audit-failed'
         end
     else
       log "Package '#{pkg}' is not installed!" do
         level :warn
-        notifies :run, "ruby_block[audit_status]"
       end
       node.run_state['audit'] = 'patch-audit-failed'
     end
@@ -65,5 +62,5 @@ ruby_block "audit_status" do
       node.normal[:tags].delete('patch-audit-failed') if node.normal[:tags].include?('patch-audit-failed')
     end
   end
-  action :nothing
+  action :run
 end
